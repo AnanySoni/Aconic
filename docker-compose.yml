@@ -38,6 +38,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://aconic:aconic@db:5432/aconic
       REDIS_URL: redis://redis:6379/0
       UPLOAD_DIR: /app/uploads
+      ENABLE_ARQ_INGEST: "true"
     ports:
       - "8000:8000"
     volumes:
