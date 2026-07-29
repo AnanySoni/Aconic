@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     rag_top_k: int = 5
     gemini_chat_model: str = "gemini-2.0-flash"
     gemini_embedding_model: str = "models/gemini-embedding-001"
+    enable_arq_ingest: bool = False
 
     @field_validator("database_url", mode="before")
     @classmethod

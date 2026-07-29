@@ -16,6 +16,10 @@ def ingest_document(document_id: str) -> str:
         if doc is None:
             return "missing"
 
+        # Avoid racing a successful inline ingest on another service.
+        if doc.status == DocumentStatus.ready and doc.extracted_text:
+            return "already_ready"
+
         doc.status = DocumentStatus.processing
         doc.error_message = None
         db.commit()

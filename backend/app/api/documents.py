@@ -50,17 +50,21 @@ async def upload_document(
 
     invalidate_documents_cache(current_user.id)
 
-    # Prefer background worker; always ensure ingest runs on this host so uploads
-    # work without a shared volume between api/worker containers.
-    try:
-        await enqueue_ingest(str(doc.id))
-    except Exception:
-        pass
-
+    # Inline ingest keeps file + parsing on the same host (required when api/worker
+    # do not share a volume). Optional ARQ enqueue for local Compose multi-service.
+    from app.core.config import get_settings
     from app.services.ingest import ingest_document
 
-    ingest_document(str(doc.id))
-    db.refresh(doc)
+    settings = get_settings()
+    if getattr(settings, "enable_arq_ingest", False):
+        try:
+            await enqueue_ingest(str(doc.id))
+        except Exception:
+            ingest_document(str(doc.id))
+            db.refresh(doc)
+    else:
+        ingest_document(str(doc.id))
+        db.refresh(doc)
 
     return doc
 
