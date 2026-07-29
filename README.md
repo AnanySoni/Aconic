@@ -4,13 +4,14 @@ Upload PDF, DOCX, or TXT documents and ask an LLM questions grounded in your fil
 
 ## Deployment URLs
 
-> Update these after deploying (Phase 4).
-
 | Service | URL |
 |---------|-----|
-| **Frontend** | _pending — deploy on Vercel_ |
-| **Backend API** | _pending — deploy on Railway_ |
-| **API Docs (Swagger)** | `_BACKEND_URL_/docs` |
+| **Frontend** | https://aconic.vercel.app |
+| **Backend API** | https://api-production-8e731.up.railway.app |
+| **API Docs (Swagger)** | https://api-production-8e731.up.railway.app/docs |
+
+GitHub: https://github.com/AnanySoni/Aconic
+
 
 ## Architecture overview
 
@@ -166,8 +167,10 @@ GitHub Actions runs unit tests + frontend lint/build on push/PR.
 
 - English documents; max upload 10MB.
 - Users only query their own documents.
-- Gemini is the sole LLM/embedding provider.
+- Gemini is the sole LLM/embedding provider (`gemini-2.0-flash` + `gemini-embedding-001`).
 - JWT access tokens are stored in `localStorage` (Bearer header) for SPA simplicity.
+- If Gemini `generateContent` quota is exhausted (HTTP 429), the API falls back to an extractive answer from retrieved chunks so demos still work. Embeddings still require a working Gemini key.
+- Local Docker Postgres is mapped to host port **5433** to avoid clashing with Homebrew Postgres on 5432.
 
 ## Trade-offs
 
