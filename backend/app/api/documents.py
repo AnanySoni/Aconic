@@ -50,14 +50,17 @@ async def upload_document(
 
     invalidate_documents_cache(current_user.id)
 
+    # Prefer background worker; always ensure ingest runs on this host so uploads
+    # work without a shared volume between api/worker containers.
     try:
         await enqueue_ingest(str(doc.id))
     except Exception:
-        # Fallback: process inline if Redis/worker unavailable
-        from app.services.ingest import ingest_document
+        pass
 
-        ingest_document(str(doc.id))
-        db.refresh(doc)
+    from app.services.ingest import ingest_document
+
+    ingest_document(str(doc.id))
+    db.refresh(doc)
 
     return doc
 
