@@ -13,8 +13,7 @@ from app.core.deps import get_current_user
 from app.db.models import ChatHistory, Document, DocumentStatus, User
 from app.db.session import get_db
 from app.schemas import AskRequest, AskResponse, HistoryItem, HistoryResponse
-from app.services.llm import stream_answer
-from app.services.rag import answer_question, retrieve_chunks
+from app.services.rag import answer_question, stream_question
 
 router = APIRouter(tags=["ask"])
 
@@ -82,14 +81,19 @@ async def _sse_stream(
     db: Session, current_user: User, payload: AskRequest
 ) -> AsyncGenerator[str, None]:
     try:
-        contexts = retrieve_chunks(db, current_user.id, payload.question, payload.document_ids)
-        source_ids = list({c["document_id"] for c in contexts})
-        yield f"event: meta\ndata: {json.dumps({'sources': [str(s) for s in source_ids]})}\n\n"
-
         parts: list[str] = []
-        async for token in stream_answer(payload.question, contexts):
+        source_ids: list = []
+        async for token, sources, _contexts in stream_question(
+            db, current_user.id, payload.question, payload.document_ids
+        ):
+            if not source_ids and sources:
+                source_ids = sources
+                yield f"event: meta\ndata: {json.dumps({'sources': [str(s) for s in source_ids]})}\n\n"
             parts.append(token)
             yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
+
+        if not source_ids:
+            yield f"event: meta\ndata: {json.dumps({'sources': []})}\n\n"
 
         answer = "".join(parts)
         history = ChatHistory(

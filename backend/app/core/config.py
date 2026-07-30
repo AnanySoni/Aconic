@@ -22,7 +22,11 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 768
     chunk_size: int = 800
     chunk_overlap: int = 150
-    rag_top_k: int = 5
+    rag_top_k: int = 12
+    # If extracted text is under this size, send whole doc for overview questions
+    full_doc_char_limit: int = 60000
+    # Map-reduce: how many chunk summaries to include per reduce batch
+    map_reduce_batch_size: int = 8
     gemini_chat_model: str = "gemini-2.0-flash"
     gemini_embedding_model: str = "models/gemini-embedding-001"
     enable_arq_ingest: bool = False

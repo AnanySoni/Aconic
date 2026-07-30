@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { MarkdownMessage } from "@/components/MarkdownMessage";
 import { apiAskStream, apiDocuments, apiHistory, DocumentItem, HistoryItem } from "@/lib/api";
 import { requireAuthClient } from "@/lib/auth";
 
@@ -98,7 +99,9 @@ export default function ChatPage() {
         <section className="surface flex min-h-[70vh] flex-col rounded-2xl">
           <div className="border-b border-[var(--line)] px-4 py-3">
             <h1 className="font-display text-2xl">AI Chat</h1>
-            <p className="text-sm text-[var(--muted)]">Answers are grounded in your uploaded content.</p>
+            <p className="text-sm text-[var(--muted)]">
+              Summaries cover the full document. Answers are grounded in your uploads.
+            </p>
           </div>
           <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
             {messages.length === 0 ? (
@@ -109,11 +112,15 @@ export default function ChatPage() {
               messages.map((m, idx) => (
                 <div
                   key={`${m.role}-${idx}`}
-                  className={`max-w-[90%] rounded-xl px-3 py-2 text-sm whitespace-pre-wrap ${
+                  className={`max-w-[90%] rounded-xl px-3 py-2 ${
                     m.role === "user" ? "ml-auto bg-[var(--accent-strong)] text-white" : "bg-[var(--bg-soft)]"
                   }`}
                 >
-                  {m.content || (loading && idx === messages.length - 1 ? "Thinking…" : "")}
+                  {m.content ? (
+                    <MarkdownMessage content={m.content} variant={m.role} />
+                  ) : loading && idx === messages.length - 1 ? (
+                    <p className="animate-pulse-soft text-sm text-[var(--muted)]">Thinking…</p>
+                  ) : null}
                 </div>
               ))
             )}

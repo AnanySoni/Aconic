@@ -185,11 +185,13 @@ GitHub Actions runs unit tests + frontend lint/build on push/PR.
 - Docker Compose
 - Swagger / OpenAPI
 - Unit + optional integration tests
-- pgvector RAG
+- pgvector RAG with higher `top_k` retrieval
+- Full-document / map-reduce summarization for “summarize / key points / overview” questions
+- Markdown-formatted chat answers (`react-markdown`)
 - SSE streaming answers
 - GitHub Actions CI
 - Redis document-list cache
-- ARQ background ingest jobs
+- ARQ background ingest jobs (enabled in local Compose)
 
 ## Screen recording outline (5 min)
 
