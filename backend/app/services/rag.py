@@ -10,8 +10,10 @@ from app.core.config import get_settings
 from app.db.models import Document, DocumentChunk, DocumentStatus
 from app.services.llm import (
     embed_query,
+    extract_section_text,
     generate_answer,
     is_overview_question,
+    is_section_summarize_question,
     map_reduce_summarize,
     stream_answer,
 )
@@ -119,12 +121,52 @@ def retrieve_full_document_contexts(
     return contexts
 
 
+def retrieve_section_contexts(
+    db: Session,
+    user_id: UUID,
+    question: str,
+    document_ids: Optional[List[UUID]] = None,
+) -> List[dict]:
+    """For 'summarize module 1': slice that section from full text, else high-k RAG."""
+    filters = [
+        Document.user_id == user_id,
+        Document.status == DocumentStatus.ready,
+    ]
+    if document_ids:
+        filters.append(Document.id.in_(document_ids))
+
+    docs = list(
+        db.scalars(select(Document).where(*filters).order_by(Document.created_at.desc())).all()
+    )
+    contexts: List[dict] = []
+    for doc in docs:
+        if doc.extracted_text:
+            section = extract_section_text(doc.extracted_text, question)
+            if section:
+                contexts.append(
+                    {
+                        "chunk_id": None,
+                        "document_id": doc.id,
+                        "content": section,
+                        "filename": doc.filename,
+                        "distance": 0.0,
+                    }
+                )
+    if contexts:
+        return contexts
+    # Fallback: retrieve more chunks with the section-focused query
+    return retrieve_chunks(db, user_id, question, document_ids, top_k=24)
+
+
 def build_contexts_for_question(
     db: Session,
     user_id: UUID,
     question: str,
     document_ids: Optional[List[UUID]] = None,
 ) -> tuple[List[dict], bool]:
+    if is_section_summarize_question(question):
+        return retrieve_section_contexts(db, user_id, question, document_ids), True
+
     overview = is_overview_question(question)
     if overview:
         contexts = retrieve_full_document_contexts(db, user_id, document_ids)
@@ -140,7 +182,6 @@ async def answer_question(
 ) -> tuple[str, List[UUID], List[dict]]:
     contexts, overview = build_contexts_for_question(db, user_id, question, document_ids)
     if overview and len(contexts) > 6 and all(c.get("chunk_id") is not None for c in contexts):
-        # Many ordered chunks without a single full-text blob → map-reduce
         answer = await map_reduce_summarize(question, contexts)
     else:
         answer = await generate_answer(question, contexts, overview=overview)
